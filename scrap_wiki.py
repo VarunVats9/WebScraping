@@ -9,8 +9,8 @@ from stop_words import get_stop_words
 import json
 
 
-# getWordList
-def getWordList(url):
+# get_word_list
+def get_word_list(url):
     word_list = []
 
     # get the data in lxml format
@@ -26,19 +26,19 @@ def getWordList(url):
         words = content.lower().split()
 
         for word in words:
-            cleaned_word = cleanWord(word)
+            cleaned_word = clean_word(word)
             if len(cleaned_word) > 0:
                 word_list.append(cleaned_word)
 
     return word_list
 
 
-def cleanWord(word):
+def clean_word(word):
     cleaned_word = re.sub('[^A-Za-z]+', '', word)
     return cleaned_word
 
 
-def createFrequencyTable(word_list):
+def create_frequency_table(word_list):
     words_dict = {}
     for word in word_list:
         if word in words_dict:
@@ -48,7 +48,7 @@ def createFrequencyTable(word_list):
     return words_dict
 
 
-def removeStopWords(sorted_word_list):
+def remove_stop_words(sorted_word_list):
     stop_words = get_stop_words('en')
     temp_list = []
 
@@ -90,13 +90,13 @@ try:
     print("Fetching the URL: " + url)
 
     # create table of word counts
-    page_word_list = getWordList(url)
-    page_word_count = createFrequencyTable(page_word_list)
+    page_word_list = get_word_list(url)
+    page_word_count = create_frequency_table(page_word_list)
     sorted_word_frequency_list = sorted(page_word_count.items(), key=operator.itemgetter(1), reverse=True)
 
     # remove the stop words
     if search_mode:
-        sorted_word_frequency_list = removeStopWords(sorted_word_frequency_list)
+        sorted_word_frequency_list = remove_stop_words(sorted_word_frequency_list)
 
     # sum the total words
     total_words = 0
