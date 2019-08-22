@@ -1,77 +1,92 @@
-''' 
+"""
 This script will segregate the videos made by OBS, into
 proper folder having a hierarchy of Year, Month, Day.
 
 It supports various formats, as supplied by arguments.
 It doesn't search for videos in subfolder.
-'''
+"""
 
-import datetime
+from datetime import datetime
 import argparse
 import sys
 import os
+import pprint
 from os import listdir, system, stat
-from os.path import isfile, join
+from os.path import isfile, join, getctime
 from shutil import move
 
-time_videos = {}
 month_list = ['None', 'Jan', 'FEB', 'MAR', 'APR', 'MAY',
               'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
 
-def create_folders(path):
-    # print(time_videos)
-    for year, month_dict in time_videos.items():
-        whole_year_path = join(path, str(year))
-        print("Year --> " + whole_year_path)
-        if not os.path.exists(whole_year_path):
-            os.makedirs(whole_year_path)
-            print("YEAR_CREATED")
-        for month, videos in month_dict.items():
-            whole_month_path = join(whole_year_path, month_list[month])
-            print("Month -->" + whole_month_path)
-            if not os.path.exists(whole_month_path):
-                os.makedirs(whole_month_path)
-                print("MONTH_CREATED")
-            for video_path in videos:
-                print(video_path)
-                print(whole_month_path)
-                move(video_path, whole_month_path)
+def create_folders(dst_path, year_videos):
+    """ Creates heirarchial folder of Year, Month and put videos in that. 
+        Arguments:
+            :dst_path: Path where the folders have to be created.
+            :year_videos: Map of (year, map(month, list of videos)).
+    """
+    pprint.pprint(year_videos)
+    user_choice = input('Are you sure you want to move these videos to {} [y/n] : '.format(dst_path))
+    if user_choice == 'y':   
+        for year, month_dict in year_videos.items():
+            absolute_year_path = join(dst_path, str(year))
+            if not os.path.exists(absolute_year_path):
+                os.makedirs(absolute_year_path)
+            for month, day_dict in month_dict.items():
+                absolute_month_path = join(absolute_year_path, month_list[month])
+                if not os.path.exists(absolute_month_path):
+                    os.makedirs(absolute_month_path)
+                print(day_dict)
+                for day, videos in day_dict.items():
+                    absolute_day_path = join(absolute_month_path, str(day))
+                    if not os.path.exists(absolute_day_path):
+                        os.makedirs(absolute_day_path)
+                    for video_path in videos:
+                        move(video_path, absolute_day_path)
+    else:
+        print('Aborting the operation!!')
 
 
-def segregate_videos(path):
-    for fle in listdir(path):
-        whole_path = join(path, fle)
-        if isfile(whole_path) and fle.endswith('.mp4'):
-            print("Found a file : " + fle)
-            create_time = stat(whole_path).st_ctime
-            time_tuple = datetime.datetime.fromtimestamp(
-                create_time).timetuple()
+def segregate_videos(src_path, ext):
+    """ Returns a map of (year, map(month, list of videos)). 
+        Arguments:
+            :src_path: Path where videos are stored.
+            :ext: List of video extensions to be segregated.
+    """
+    year_videos = {}
+    for fle in listdir(src_path):
+        absolute_file_path = join(src_path, fle)
+        if isfile(absolute_file_path) and fle.endswith(tuple(ext)):
+            last_metadata_change = datetime.fromtimestamp(getctime(absolute_file_path))
+            time_tuple = last_metadata_change.timetuple()
             year = time_tuple.tm_year
             month = time_tuple.tm_mon
-            month_videos = time_videos.get(year, {})
-            # print(month_videos)
-            month_videos.setdefault(month, []).append(whole_path)
-            time_videos[year] = month_videos
-    # print(time_videos)
+            day = time_tuple.tm_mday
+            month_videos = year_videos.get(year, {})
+            day_videos = month_videos.get(month, {})
+            day_videos.setdefault(day, []).append(absolute_file_path)
+            month_videos[month] = day_videos
+            year_videos[year] = month_videos
+    return year_videos
 
 
 def main():
-    '''
+    """
     Initialize two arguments:
         1. To define the classpath of the videos folder.
         2. To define the video formats.
-    '''
+    """
     parser = argparse.ArgumentParser()
-    parser.add_argument("")
-    args = parser.parse_args()
-    for i in range(len(sys.argv)):
-        print(sys.argv[i])
+    parser.add_argument("-src", required=True,
+                        help="Path where videos are stored.")
+    parser.add_argument("-dst", required=True,
+                        help="Path where folders should be created.")
+    parser.add_argument("-ext", nargs='+', required=True,
+                        help="Video extensions to arrange.")
 
-    # Assuming only one argument is there.
-    path = sys.argv[1]
-    segregate_videos(path)
-    create_folders(path)
+    args = parser.parse_args()
+    time_videos = segregate_videos(args.src, args.ext)
+    create_folders(args.dst, time_videos)
 
 
 if __name__ == "__main__":
