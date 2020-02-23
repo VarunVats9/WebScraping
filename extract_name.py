@@ -52,7 +52,7 @@ def callPagesWithinRange():
 		print(url + " has total names : " + str(len(girl_links)))
 		final_list = []
 		for girl_link in girl_links:
-			time.sleep(10)
+			time.sleep(20)
 			girl_name = girl_link.split("/")[-1]
 			#print(girl_link)
 			driver.get(girl_link)
@@ -78,19 +78,49 @@ def callPagesWithinRange():
 		f.write(tabulate(final_list, headers=print_headers, tablefmt='fancy_grid'))
 		f.close()
 
-	# reverse sort based on the points
-	sorted(full_list, key=lambda x: x[0], reverse=True)
+def printAllNames():
+	full_list = []
+	print_headers = ['Points', 'Name', 'Meaning']
+	for page in range(int(start), int(end)):
+		url = name_link + '/' + str(page)
 
-	# print the table with tabulate
-	#print(tabulate(final_list, headers=print_headers, tablefmt='fancy_grid'))
+		# open name site
+		#print(url)
+		driver.get(url)
+		final_list = []
+		
+		try:
+			points = driver.find_elements_by_xpath("//ul[@class='nbd']//span[@class='v']")
+			meanings = driver.find_elements_by_xpath("//ul[@class='nbd']//dd[@class='ndfn']")
+			names = driver.find_elements_by_xpath("//ul[@class='nbd']//a[contains(@href,'https://www.babynamesdirect.com/girl')]")
+			
+			print(len(points))
+			print(len(meanings))
+			print(len(names))
+			
+			if len(points) == len(meanings) and len(names) == len(meanings):
+				for i in range(len(points)):
+					final_list.append([int(points[i].text), names[i].text, meanings[i].text])
+		except:
+			print("Unable to fetch the page : " + url)
+		
+		# reverse sort based on the points
+		sort_list = sorted(final_list, key=lambda x: x[0], reverse=True)
+		print(tabulate(sort_list, headers=print_headers, tablefmt='fancy_grid'))
+		full_list.extend(final_list)
+		time.sleep(10)
+
+	sorted_list = sorted(full_list, key=lambda x: x[0], reverse=True)
+	print(tabulate(sorted_list, headers=print_headers, tablefmt='fancy_grid'))
 
 	# write to a file
 	f = open("full_list.txt", "w+")
-	f.write(tabulate(final_list, headers=print_headers, tablefmt='fancy_grid'))
+	f.write(tabulate(sorted_list, headers=print_headers, tablefmt='fancy_grid'))
 	f.close()
 
 try:
-	callPagesWithinRange()
+	#callPagesWithinRange()
+	printAllNames()
 # throw an exception in case it breaks
 except requests.exceptions.Timeout:
 	print("The server didn't respond. Please, try again later.")
